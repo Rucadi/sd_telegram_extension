@@ -68,7 +68,7 @@ def on_ui_tabs():
 
                     with gr.Group():
                         with gr.Row():
-                            db_cmd_custom_command_list = gr.components.Dropdown(label="Command to Remove", choices=tgconfig.getCommandConfig().getCommands(), interactive=True)
+                            db_cmd_custom_command_list = gr.components.Dropdown(label="Command to Remove", choices=tgconfig.getCommandConfig().getCustomCommands(), interactive=True)
                             db_cmd_remove_command = gr.components.Button(value="Remove command")
                         with gr.Row():
                             db_cmd_to_del_definition = gr.Textbox(label="Description of the Command", interactive=False)
@@ -81,10 +81,10 @@ def on_ui_tabs():
                         db_steps_number = gr.components.Slider(label="Number Of Steps", minimum=1, maximum=50, step=1, value=tgconfig.getGenerationConfig().getDefaultSteps(), interactive=True)
                         db_user_steps_number = gr.components.Slider(label="[BOT USER CONFIG] MAX Number Of Steps", minimum=1, maximum=50, step=1, value=tgconfig.getGenerationConfig().getUserMaxSteps(), interactive=True)
                         db_allow_step_user_config = gr.components.Checkbox(label="Allow Bot User Config", value=tgconfig.getGenerationConfig().getAllowUserCfgSteps())
-                    with gr.Row():
-                        db_img_num = gr.components.Slider(label="Number Of Images", minimum=1, maximum=50, step=1, value=tgconfig.getGenerationConfig().getDefaultImages(), interactive=True)
-                        db_user_img_num = gr.components.Slider(label="[BOT USER CONFIG] MAX Number Of Images", min=1, max=50, value=tgconfig.getGenerationConfig().getUserMaxImages(),interactive=True)
-                        db_allow_user_img_num = gr.components.Checkbox(label="Allow Bot User Config", value=tgconfig.getGenerationConfig().getAllowUserCfgImages())
+                    #with gr.Row():
+                       #db_img_num = gr.components.Slider(label="Number Of Images", minimum=1, maximum=10, step=1, value=tgconfig.getGenerationConfig().getDefaultImages(), interactive=True)
+                       #db_user_img_num = gr.components.Slider(label="[BOT USER CONFIG] MAX Number Of Images", min=1, max=10, value=tgconfig.getGenerationConfig().getUserMaxImages(),interactive=True)
+                       #db_allow_user_img_num = gr.components.Checkbox(label="Allow Bot User Config", value=tgconfig.getGenerationConfig().getAllowUserCfgImages())
                 
                     with gr.Row():
                         gr.HTML(value="<p>Allowed Image Sizes</p>")
@@ -179,24 +179,24 @@ def on_ui_tabs():
 
         db_allow_step_user_config.change(fn=on_def_allow_user_steps_number, inputs=[db_allow_step_user_config], outputs=[db_allow_step_user_config])
 
-        def on_def_img_number(*args):
-            tgconfig.getGenerationConfig().setDefaultImages(args[0])
-            tgconfig.getGenerationConfig().save()
-            return db_img_num.update(value=args[0])
+        #def on_def_img_number(*args):
+        #    tgconfig.getGenerationConfig().setDefaultImages(args[0])
+        #    tgconfig.getGenerationConfig().save()
+        #    return db_img_num.update(value=args[0])
 
-        db_img_num.change(fn=on_def_img_number, inputs=[db_img_num], outputs=[db_img_num])
+        #db_img_num.change(fn=on_def_img_number, inputs=[db_img_num], outputs=[db_img_num])
 
-        def on_def_user_img_number(*args):
-            tgconfig.getGenerationConfig().setUserMaxImages(args[0])
-            tgconfig.getGenerationConfig().save()
-            return db_user_img_num.update(value=args[0])
-        db_user_img_num.change(fn=on_def_user_img_number, inputs=[db_user_img_num], outputs=[db_user_img_num])
+        #def on_def_user_img_number(*args):
+        #    tgconfig.getGenerationConfig().setUserMaxImages(args[0])
+        #    tgconfig.getGenerationConfig().save()
+        #    return db_user_img_num.update(value=args[0])
+        #db_user_img_num.change(fn=on_def_user_img_number, inputs=[db_user_img_num], outputs=[db_user_img_num])
 
-        def on_def_allow_user_img_number(*args):
-            tgconfig.getGenerationConfig().setImageAllowCfg(args[0])
-            tgconfig.getGenerationConfig().save()
-            return db_allow_user_img_num.update(value=args[0])
-        db_allow_user_img_num.change(fn=on_def_allow_user_img_number, inputs=[db_allow_user_img_num], outputs=[db_allow_user_img_num])
+        #def on_def_allow_user_img_number(*args):
+        #    tgconfig.getGenerationConfig().setImageAllowCfg(args[0])
+        #    tgconfig.getGenerationConfig().save()
+        #    return db_allow_user_img_num.update(value=args[0])
+        #db_allow_user_img_num.change(fn=on_def_allow_user_img_number, inputs=[db_allow_user_img_num], outputs=[db_allow_user_img_num])
 
 
         def on_bot_status_click(*args):

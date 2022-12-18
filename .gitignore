@@ -61,3 +61,4 @@ tgbot/config.json
 tgbot/command_config.json
 tgbot/generation_config.json
 tgbot/model_config.json
+tgbot/user_config.json

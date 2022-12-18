@@ -6,8 +6,172 @@ class  Utils():
     def getModels():
         return shared.list_checkpoint_tiles()
 
+    def getSamplers():
+        return ['Euler a', 
+                'Euler', 
+                'LMS', 
+                'Heun',
+                'DPM2', 
+                'DPM2 a',
+                'DPM++ 2S a',
+                'DPM++ 2M',
+                'DPM++ SDE',
+                'DPM fast', 
+                'DPM adaptive', 
+                'LMS Karras', 
+                'DPM2 Karras',
+                'DPM2 a Karras', 
+                'DPM++ 2S a Karras',
+                'DPM++ 2M Karras',
+                'DPM++ SDE Karras']
+
+
+
+
 class UserConfig():
-    pass
+    config_name = "user_config"
+
+    tgbot_config = {}
+
+    tgbot_internal = {
+        "user_tags": {},
+        "user_negative_tags": {},
+        "resolution": { "x": 512, "y": 512 },
+        "user_img_num": 1,
+        "user_model": "",
+        "user_step_num": 28,
+        "user_cfg_scale": 11,
+        "user_sampler": "Euler a",
+    }
+    tgbot_default_config = {
+
+    }
+    
+
+    def init(self, uid):
+        if uid not in self.tgbot_config:
+            self.tgbot_config[uid] = self.tgbot_internal.copy()
+            self.save()
+        #~if uid is missing internal data, add that
+        if self.tgbot_config[uid].keys() != self.tgbot_internal.keys():
+            for key in self.tgbot_internal.keys():
+                if key not in self.tgbot_config[uid].keys():
+                    self.tgbot_config[uid][key] = self.tgbot_internal[key]
+            self.save()
+
+    def setUserSampler(self, uid, sampler):
+        self.init(uid)
+        self.tgbot_config[uid]["user_sampler"] = sampler
+        self.save()
+
+    
+    def getUserSampler(self, uid):
+        self.init(uid)
+
+        return self.tgbot_config[uid]["user_sampler"]
+
+
+    def setUserResolution(self, uid, x, y):
+        self.init(uid)
+        self.tgbot_config[uid]["resolution"] = { "x": x, "y": y }
+        self.save()
+    
+    def getUserResolution(self, uid):
+        self.init(uid)
+
+        return self.tgbot_config[uid]["resolution"]
+
+    def getUserStepNum(self, uid):
+        self.init(uid)
+        return self.tgbot_config[uid]["user_step_num"]
+
+    def setUserStepNum(self, uid, num):
+        self.init(uid)
+
+        self.tgbot_config[uid]["user_step_num"] = num
+        self.save()
+
+    def getUserCfgScale(self, uid):
+        self.init(uid)
+
+        return self.tgbot_config[uid]["user_cfg_scale"]
+
+    def setUserCfgScale(self, uid, scale):
+        self.init(uid)
+
+        self.tgbot_config[uid]["user_cfg_scale"] = scale
+        self.save()
+    
+    def getUserImgNum(self, uid):
+        self.init(uid)
+
+        return self.tgbot_config[uid]["user_img_num"]
+
+    def setUserImgNum(self, uid, num):
+        self.init(uid)
+
+        self.tgbot_config[uid]["user_img_num"] = num
+        self.save()
+
+    def setUserModel(self, uid, model):
+        self.init(uid)
+
+        self.tgbot_config[uid]["user_model"] = model
+        self.save()
+    
+    def getUserModel(self, uid):
+        self.init(uid)
+
+        return self.tgbot_config[uid]["user_model"]
+
+    def addUserNegativeTag(self, uid, tag, value):
+        self.init(uid)
+
+        self.tgbot_config[uid]["user_negative_tags"][tag] = value
+        self.save()
+
+    def removeUserNegativeTag(self, uid, tag):
+        self.init(uid)
+
+        if tag not in self.tgbot_config[uid]["user_negative_tags"]:
+            return
+
+        self.tgbot_config[uid]["user_negative_tags"].remove(tag)
+        self.save()
+
+
+    def addUserTag(self, uid, tag, value):
+        self.init(uid)
+
+        self.tgbot_config[uid]["user_tags"][tag] = value
+        self.save()
+
+    def removeUserTag(self, uid, tag):
+        self.init(uid)
+
+        if tag not in self.tgbot_config[uid]["user_tags"]:
+            return
+
+        self.tgbot_config[uid]["user_tags"].remove(tag)
+        self.save()
+
+    def save(self):
+        json.dump(self.tgbot_config, open(f"extensions/sd_telegram_extension/tgbot/{self.config_name}.json", "w"))
+
+    def initConfig(self):
+        self.tgbot_config = self.tgbot_default_config
+        self.save()
+
+    def load(self):
+        #load from file as json
+        try:
+            self.tgbot_config = json.load(open(f"extensions/sd_telegram_extension/tgbot/{self.config_name}.json", "r"))
+            # if key of tgbot_config is not in tgbot_default_config, add it 
+            for key in self.tgbot_default_config:
+                if key not in self.tgbot_config:
+                    self.tgbot_config[key] = self.tgbot_default_config[key]
+        except:
+            self.initConfig()
 
 
 
@@ -84,6 +248,7 @@ class GenerationConfig():
             {"x": 512, "y": 768, "allow": True},
             {"x": 1024, "y": 768, "allow": False},
             {"x": 768, "y": 1024, "allow": False},
+            {"x": 1024, "y": 1024, "allow": False},
         ]
     }
     
@@ -161,12 +326,21 @@ class CommandConfig():
     tgbot_config = {}
     tgbot_default_config = {}
     
-    def getCommands(self):
-        #return tgbot_config keys as a list of strings
+
+    def getBasicCommands(self):
+        return ["start", "ai", "tag", "ntag", "config", "commands", "ltags", "lntags", "explain"]
+
+    def getCustomCommands(self):
         ret = []
         for key in self.tgbot_config:
             ret.append(str(key))
         return ret
+
+    def getGenerationCommands(self):
+        return ["ai"] + self.getCustomCommands()
+
+    def getCommands(self):
+        return self.getBasicCommands() + self.getCustomCommands()
 
     def addCommand(self, cmd, desc, pos, neg):
         self.tgbot_config[cmd] = {"desc": desc, "pos": pos, "neg": neg}
@@ -286,6 +460,8 @@ command_config.load()
 generation_config = GenerationConfig()
 generation_config.load()
 
+user_config = UserConfig()
+user_config.load()
 
 def getModelConfig():
     global model_config
@@ -298,6 +474,11 @@ def getSystemConfig():
 def getCommandConfig():
     global command_config
     return command_config
+
+
+def getUserConfig():
+    global user_config
+    return user_config
 
 def getGenerationConfig():
     global generation_config
