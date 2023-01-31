@@ -148,7 +148,7 @@ def sd_generate_image(item):
     endpointuri = '/sdapi/v1/txt2img'
     print(item)
     try:
-        user_id = item['user_id']
+        user_id = str(item['user_id'])
         cfg_scale = tgconfig.getUserConfig().getUserCfgScale(user_id)
         user_model = tgconfig.getUserConfig().getUserModel(user_id)
         step_num = tgconfig.getUserConfig().getUserStepNum(user_id) if tgconfig.getGenerationConfig().getAllowUserCfgSteps() else tgconfig.getGenerationConfig().getDefaultSteps()
@@ -166,8 +166,18 @@ def sd_generate_image(item):
         return None
     negative_prompt = tgconfig.getSystemConfig().getBotDefaultNegativePrompt()
 
+
+    prompt_to_add = tgconfig.getSystemConfig().getBotDefaultPrompt()
+
+    if item['command'] !=  'ai':
+        cmdinfo = tgconfig.getCommandConfig().getCommand(item['command'])
+        prompt_to_add = prompt_to_add + cmdinfo['pos']
+        negative_prompt = negative_prompt + cmdinfo['neg']
+        
+    prompt_to_add = prompt_to_add + item['prompt']
+
     payload = {
-        "prompt": item['prompt'],
+        "prompt": prompt_to_add,
         "sampler_name": sampler,
         "steps": step_num,
         "cfg_scale": cfg_scale,
@@ -178,6 +188,7 @@ def sd_generate_image(item):
         "include_init_images": False
     }
 
+    print("payload: ", payload)
     if item["img"] != None:
         payload["include_init_images"] = True
         payload["init_images"] = [ base64.b64encode(item["img"]).decode("ascii")]
@@ -195,16 +206,20 @@ def telegram_task_image_generation(item):
                     files={'photo': ("img", item["img"])},
                     data={'chat_id': telegram_channel_id, 'caption': "Base image for next prompt" },  timeout=10)
                     
+
+    user_id = str(item['user_id'])
+    user_model = tgconfig.getUserConfig().getUserModel(user_id)
+    print( str(tgconfig.getUserConfig().getUserModel(user_id)), "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@", user_id, user_model)
     generated_image = sd_generate_image(item)
     responseFromChannel = postWithRetry(telegram_api_url()+'/sendPhoto',
                   files={'photo': ("img", generated_image)},
-                  data={'chat_id': telegram_channel_id, 'caption': item["prompt"]},  timeout=10)
+                  data={'chat_id': telegram_channel_id, 'caption': user_model+': \n'+item["prompt"]},  timeout=10)
 
 
     fileId = responseFromChannel.json()["result"]['photo'][-1]["file_id"]
     #send UPDATE IMAGE in the chat
     r = postWithRetry(telegram_api_url()+'/editMessageMedia',
-                  data={'chat_id': item["chat_id"], 'message_id': item["updateMessageId"], 'media': json.dumps({"type":"photo", "media":fileId, "caption": item["prompt"]})},  timeout=10)
+                  data={'chat_id': item["chat_id"], 'message_id': item["updateMessageId"], 'media': json.dumps({"type":"photo", "media":fileId, "caption": user_model+':\n '+item["prompt"]})},  timeout=10)
 
 def telegram_task_image_explain(item):
         AI_API_URL="http://127.0.0.1:7860"
@@ -229,7 +244,7 @@ def get_queue_item():
 
 
 def processCallbacks(item):
-    uid = item['user_id']
+    uid = str(item['user_id'])
     print("CALLBACK HERE!!",  item)
     try:
         print("CMDVALUE0", item['cmdvalue'][0])
@@ -265,21 +280,8 @@ def processQueueThread():
             continue
         try:
             print("PROCESSING QUEUE ITEM", item)
-            if item["command"] == "start":
-                postWithRetry(telegram_api_url()+'/sendMessage', data={'chat_id': item['chat_id'], 'text': tgconfig.getSystemConfig().getBotStartMsg()},  timeout=10)
-            elif item['command'] == "config":
-                print("CONFIG!!!!!")
-                #send model list with inline keyboard using requests
-                postWithRetry(telegram_api_url()+'/sendMessage', data={'chat_id': item['chat_id'], 'text': "Select the model to use", 'reply_markup': json.dumps(model_selection_kb)},  timeout=10)
-                postWithRetry(telegram_api_url()+'/sendMessage', data={'chat_id': item['chat_id'], 'text': "Select the sampler", 'reply_markup': json.dumps(sampler_selection_kb)},  timeout=10)
-                postWithRetry(telegram_api_url()+'/sendMessage', data={'chat_id': item['chat_id'], 'text': "Select the resolution", 'reply_markup': json.dumps(img_resolution_selection_kb)},  timeout=10)
-                postWithRetry(telegram_api_url()+'/sendMessage', data={'chat_id': item['chat_id'], 'text': "Select the CFG Scale", 'reply_markup': json.dumps(cfg_configration_kb)},  timeout=10)
-                postWithRetry(telegram_api_url()+'/sendMessage', data={'chat_id': item['chat_id'], 'text': "Select the number of steps", 'reply_markup': json.dumps(num_steps_kb)},  timeout=10)
-            elif item['command'] == "callback_query":
-                processCallbacks(item)
-
-            else:
-                telegram_task_image_generation(item)
+   
+            telegram_task_image_generation(item)
                 
         except Exception as ERR:
             print(ERR)
@@ -343,11 +345,12 @@ def telegram_msg_get_prompt(message):
 
 def telegram_parse_update(data):
     try:
-        data['message']['text']
+        test = data['message']['text']
     except:
         try:
             if 'callback_query' in data:
                 print("SPLITTED QUERY IN DATA!!!")
+                print(data)
                 splitted = data['callback_query']['data'].split(",")
                 val =  {
                     "command": "callback_query",
@@ -362,8 +365,7 @@ def telegram_parse_update(data):
             print(ERR)
             return None
     #check if data contains key callback_query
-    
-
+    print(data)
     command, message = telegram_get_command(data['message']['text'])
     
     if command is None:
@@ -427,6 +429,22 @@ def telegram_working_loop():
                 getWithRetry(telegram_api_url()+"/sendMessage", data={'chat_id': parsed_command["chat_id"], 'text': cmd_text_info},  timeout=10)
             elif parsed_command["command"] == "explain":
                 telegram_task_image_explain(parsed_command)
+            elif parsed_command["command"] == "tag":
+                pass
+            elif parsed_command["command"] == "start":
+                postWithRetry(telegram_api_url()+'/sendMessage', data={'chat_id': parsed_command['chat_id'], 'text': tgconfig.getSystemConfig().getBotStartMsg()},  timeout=10)
+            elif parsed_command['command'] == "config":
+                print("CONFIG!!!!!")
+                #send model list with inline keyboard using requests
+                postWithRetry(telegram_api_url()+'/sendMessage', data={'chat_id': parsed_command['chat_id'], 'text': "Select the model to use", 'reply_markup': json.dumps(model_selection_kb)},  timeout=10)
+                postWithRetry(telegram_api_url()+'/sendMessage', data={'chat_id': parsed_command['chat_id'], 'text': "Select the sampler", 'reply_markup': json.dumps(sampler_selection_kb)},  timeout=10)
+                postWithRetry(telegram_api_url()+'/sendMessage', data={'chat_id': parsed_command['chat_id'], 'text': "Select the resolution", 'reply_markup': json.dumps(img_resolution_selection_kb)},  timeout=10)
+                postWithRetry(telegram_api_url()+'/sendMessage', data={'chat_id': parsed_command['chat_id'], 'text': "Select the CFG Scale", 'reply_markup': json.dumps(cfg_configration_kb)},  timeout=10)
+                postWithRetry(telegram_api_url()+'/sendMessage', data={'chat_id': parsed_command['chat_id'], 'text': "Select the number of steps", 'reply_markup': json.dumps(num_steps_kb)},  timeout=10)
+            elif parsed_command['command'] == "callback_query":
+                processCallbacks(parsed_command)
+
+                #telegram_task_image_tag(parsed_command)
             elif  parsed_command['command'] in generation_command_list:
                 parsed_command["updateMessageId"] = sendMessageReplyAndGetId(parsed_command["chat_id"], parsed_command["reply_id"])
                 if parsed_command["prompt"] == "":
@@ -435,11 +453,17 @@ def telegram_working_loop():
                     parsed_command = last_command_per_user[parsed_command["user_id"]]
                     parsed_command["command"] = cmd
                     parsed_command["updateMessageId"] = upmid
-                last_command_per_user[parsed_command["user_id"]] = parsed_command
+                last_command_per_user[parsed_command["user_id"]] = parsed_command.copy()
+                if parsed_command["command"] == "dai":
+                    parsed_command["command"] = "ai"
+                    laicommand = parsed_command.copy()
+                    laicommand["command"] = "lai"
+                    laicommand["updateMessageId"] = sendMessageReplyAndGetId(parsed_command["chat_id"], parsed_command["reply_id"])
+                    joblist.put(laicommand)
                 joblist.put(parsed_command)
         except Exception as ERR:
             print(ERR)
-            pass
+            continue
         
     
 

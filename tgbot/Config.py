@@ -36,15 +36,12 @@ class UserConfig():
     tgbot_internal = {
         "user_tags": {},
         "user_negative_tags": {},
-        "resolution": { "x": 512, "y": 512 },
+        "resolution": { "x": 512, "y": 768 },
         "user_img_num": 1,
-        "user_model": "",
+        "user_model": "anything-v4.5-pruned.safetensors [25a25911]",
         "user_step_num": 28,
         "user_cfg_scale": 11,
         "user_sampler": "Euler a",
-    }
-    tgbot_default_config = {
-
     }
     
 
@@ -166,10 +163,6 @@ class UserConfig():
         #load from file as json
         try:
             self.tgbot_config = json.load(open(f"extensions/sd_telegram_extension/tgbot/{self.config_name}.json", "r"))
-            # if key of tgbot_config is not in tgbot_default_config, add it 
-            for key in self.tgbot_default_config:
-                if key not in self.tgbot_config:
-                    self.tgbot_config[key] = self.tgbot_default_config[key]
         except:
             self.initConfig()
 
@@ -328,7 +321,7 @@ class CommandConfig():
     
 
     def getBasicCommands(self):
-        return ["start", "ai", "tag", "ntag", "config", "commands", "ltags", "lntags", "explain"]
+        return ["start", "ai", "dai", "tag", "ntag", "config", "commands", "ltags", "lntags", "explain"]
 
     def getCustomCommands(self):
         ret = []
@@ -337,7 +330,7 @@ class CommandConfig():
         return ret
 
     def getGenerationCommands(self):
-        return ["ai"] + self.getCustomCommands()
+        return ["ai", "dai"] + self.getCustomCommands()
 
     def getCommands(self):
         return self.getBasicCommands() + self.getCustomCommands()
